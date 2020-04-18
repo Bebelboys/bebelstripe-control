@@ -71,3 +71,13 @@ class LEDWall:
         value_scaled = float(value - left_min) / float(left_span)
         # Convert the 0-1 range into a value in the right range.
         return right_min + (value_scaled * right_span)
+
+    def strobo(self, shared_vars):
+        while True:
+            self.pixels.fill(shared_vars.levelColor)
+            self.pixels.show()
+            time.sleep(shared_vars.period_sec * shared_vars.duty_cycle)
+            self.pixels.fill((0, 0, 0))
+            self.pixels.show()
+            time.sleep(shared_vars.period_sec * (1 - shared_vars.duty_cycle))
+
