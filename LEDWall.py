@@ -18,13 +18,13 @@ class LEDWall:
         self.oldValue = [0, 0, 0, 0, 0, 0, 0, 0]
         self.dotFallingRate = 0
 
-    def start(self, var,):
+    def music_spectrum(self, shared_vars):
         self.sinus(iterations=1)
         while True:
-            self.dot(var.spec_levels)
-            self.refresh(var.spec_levels)
+            self.falling_dot(shared_vars.music_spectrum_levels)
+            self.refresh_spectrum(shared_vars.music_spectrum_levels)
 
-    def refresh(self, spectrum_levels):
+    def refresh_spectrum(self, spectrum_levels):
         for column in range(0, self.num_columns):
             # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen? 
             # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
@@ -37,7 +37,7 @@ class LEDWall:
             self.pixels[self.num_rows * column + self.oldValue[column]] = dotColor
         self.pixels.show()
 
-    def dot(self, spectrum_levels):
+    def falling_dot(self, spectrum_levels):
         for column in range(0, self.num_columns):
             if spectrum_levels[column] > 43:
                 spectrum_levels[column] = 43
