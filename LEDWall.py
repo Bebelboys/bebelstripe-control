@@ -2,6 +2,7 @@ import board
 import neopixel
 import time
 from math import cos
+import numpy as np
 
 from options import *
 
@@ -17,6 +18,7 @@ class LEDWall:
                                         pixel_order=self.pixel_type)
         self.oldValue = [0, 0, 0, 0, 0, 0, 0, 0]
         self.dotFallingRate = 0
+        self.oldSpectrumLevels = np.array(8 * [0])
 
     def start(self, var,):
         self.sinus(iterations=1)
@@ -25,6 +27,8 @@ class LEDWall:
             self.refresh(var.spec_levels)
 
     def refresh(self, spectrum_levels):
+        spectrum_levels = np.array(spectrum_levels)
+        spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
         for column in range(0, self.num_columns):
             # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen? 
             # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
@@ -36,6 +40,7 @@ class LEDWall:
                 self.pixels[self.num_rows * column + level] = levelColor
             self.pixels[self.num_rows * column + self.oldValue[column]] = dotColor
         self.pixels.show()
+        self.oldSpectrumLevels = spectrum_levels
 
     def dot(self, spectrum_levels):
         for column in range(0, self.num_columns):
