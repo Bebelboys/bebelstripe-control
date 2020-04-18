@@ -20,15 +20,16 @@ class LEDWall:
         self.dotFallingRate = 0
         self.oldSpectrumLevels = np.array(8 * [0])
 
-    def start(self, var,):
+    def music_spectrum(self, shared_vars):
         self.sinus(iterations=1)
         while True:
-            self.dot(var.spec_levels)
-            self.refresh(var.spec_levels)
+            self.falling_dot(shared_vars.music_spectrum_levels)
+            self.refresh_spectrum(shared_vars.music_spectrum_levels)
 
     def refresh(self, spectrum_levels):
         spectrum_levels = np.array(spectrum_levels)
         spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
+
         for column in range(0, self.num_columns):
             # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen? 
             # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
@@ -42,7 +43,7 @@ class LEDWall:
         self.pixels.show()
         self.oldSpectrumLevels = spectrum_levels
 
-    def dot(self, spectrum_levels):
+    def falling_dot(self, spectrum_levels):
         for column in range(0, self.num_columns):
             if spectrum_levels[column] > 43:
                 spectrum_levels[column] = 43
@@ -76,3 +77,13 @@ class LEDWall:
         value_scaled = float(value - left_min) / float(left_span)
         # Convert the 0-1 range into a value in the right range.
         return right_min + (value_scaled * right_span)
+
+    def strobo(self, shared_vars):
+        while True:
+            self.pixels.fill(shared_vars.levelColor)
+            self.pixels.show()
+            time.sleep(shared_vars.period_sec * shared_vars.duty_cycle)
+            self.pixels.fill((0, 0, 0))
+            self.pixels.show()
+            time.sleep(shared_vars.period_sec * (1 - shared_vars.duty_cycle))
+

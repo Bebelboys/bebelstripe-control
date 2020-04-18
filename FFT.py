@@ -28,7 +28,7 @@ class FFT:
     def get_power_array_index_of_frequency(self, frequency):
         return int(self.channels * self.chunk_size * frequency / self.sampling_frequency)
 
-    def start(self, var):
+    def start(self, shared_vars):
         spectrum_levels = np.array([0, 0, 0, 0, 0, 0, 0, 0])
         while True:
             audio_data = self.audio_stream.read(self.chunk_size, exception_on_overflow=False)
@@ -50,6 +50,8 @@ class FFT:
             # tidy up spectrum level values
             spectrum_levels = np.divide(np.multiply(spectrum_levels, self.weighting), 1000000)
             # TODO: 1e6 determined empirically
-            spectrum_levels = np.interp(spectrum_levels, [0, self.max_value_transformed_fft_data],  [0, self.num_rows]) # TODO: max_value_transformed_fft_data was determined empirically
+            spectrum_levels = np.interp(spectrum_levels, [0, self.max_value_transformed_fft_data],  [0, self.num_rows])
+            # TODO: max_value_transformed_fft_data was determined empirically
+            # transform to integer array and set to shared_vars
             spectrum_levels = spectrum_levels.astype(int)
-            var.spec_levels = spectrum_levels.tolist()
+            shared_vars.music_spectrum_levels = spectrum_levels.tolist()
