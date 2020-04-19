@@ -26,7 +26,7 @@ class LEDWall:
             self.falling_dot(shared_vars.music_spectrum_levels)
             self.refresh_spectrum(shared_vars.music_spectrum_levels)
 
-    def refresh(self, spectrum_levels):
+    def refresh_spectrum(self, spectrum_levels):
         spectrum_levels = np.array(spectrum_levels)
         spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
