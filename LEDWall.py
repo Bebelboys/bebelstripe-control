@@ -4,8 +4,6 @@ import time
 from math import cos
 import numpy as np
 
-from options import *
-
 
 class LEDWall:
     def __init__(self):
@@ -23,11 +21,11 @@ class LEDWall:
     def music_spectrum(self, shared_vars):
         self.sinus(iterations=1)
         while True:
-            self.falling_dot(shared_vars.music_spectrum_levels)
-            self.refresh_spectrum(shared_vars.music_spectrum_levels)
+            self.falling_dot(shared_vars)
+            self.refresh_spectrum(shared_vars)
 
-    def refresh_spectrum(self, spectrum_levels):
-        spectrum_levels = np.array(spectrum_levels)
+    def refresh_spectrum(self, shared_vars):
+        spectrum_levels = np.array(shared_vars.music_spectrum_levels)
         spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
         for column in range(0, self.num_columns):
@@ -38,17 +36,17 @@ class LEDWall:
             for neglevel in range(0, self.num_rows - spectrum_levels[column]):
                 self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
             for level in range(0, spectrum_levels[column]):
-                self.pixels[self.num_rows * column + level] = levelColor
-            self.pixels[self.num_rows * column + self.oldValue[column]] = dotColor
+                self.pixels[self.num_rows * column + level] = shared_vars.levelColor
+            self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.dotColor
         self.pixels.show()
         self.oldSpectrumLevels = spectrum_levels
 
-    def falling_dot(self, spectrum_levels):
+    def falling_dot(self, shared_vars):
         for column in range(0, self.num_columns):
-            if spectrum_levels[column] > 43:
-                spectrum_levels[column] = 43
-            if self.oldValue[column] <= spectrum_levels[column]:
-                self.oldValue[column] = spectrum_levels[column]
+            if shared_vars.music_spectrum_levels[column] > 43:
+                shared_vars.music_spectrum_levels[column] = 43
+            if self.oldValue[column] <= shared_vars.music_spectrum_levels[column]:
+                self.oldValue[column] = shared_vars.music_spectrum_levels[column]
             elif self.oldValue[column] > 0 and self.dotFallingRate > 1:
                 self.oldValue[column] -= 1
         if self.dotFallingRate > 1:
