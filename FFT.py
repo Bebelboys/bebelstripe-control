@@ -55,4 +55,4 @@ class FFT:
             # TODO: max_value_transformed_fft_data was determined empirically
             # transform to integer array and set to shared_vars
             spectrum_levels = spectrum_levels.astype(int)
-            shared_vars.music_spectrum_levels = spectrum_levels.tolist()
+            shared_vars.musicSpectrumLevels = spectrum_levels.tolist()

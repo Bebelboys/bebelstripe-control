@@ -25,7 +25,7 @@ class LEDWall:
             self.refresh_spectrum(shared_vars)
 
     def refresh_spectrum(self, shared_vars):
-        spectrum_levels = np.array(shared_vars.music_spectrum_levels)
+        spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
         spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
         for column in range(0, self.num_columns):
@@ -36,17 +36,17 @@ class LEDWall:
             for neglevel in range(0, self.num_rows - spectrum_levels[column]):
                 self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
             for level in range(0, spectrum_levels[column]):
-                self.pixels[self.num_rows * column + level] = shared_vars.levelColor
-            self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.dotColor
+                self.pixels[self.num_rows * column + level] = shared_vars.primaryColor
+            self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.secondaryColor
         self.pixels.show()
         self.oldSpectrumLevels = spectrum_levels
 
     def falling_dot(self, shared_vars):
         for column in range(0, self.num_columns):
-            if shared_vars.music_spectrum_levels[column] > 43:
-                shared_vars.music_spectrum_levels[column] = 43
-            if self.oldValue[column] <= shared_vars.music_spectrum_levels[column]:
-                self.oldValue[column] = shared_vars.music_spectrum_levels[column]
+            if shared_vars.musicSpectrumLevels[column] > 43:
+                shared_vars.musicSpectrumLevels[column] = 43
+            if self.oldValue[column] <= shared_vars.musicSpectrumLevels[column]:
+                self.oldValue[column] = shared_vars.musicSpectrumLevels[column]
             elif self.oldValue[column] > 0 and self.dotFallingRate > 1:
                 self.oldValue[column] -= 1
         if self.dotFallingRate > 1:
@@ -78,10 +78,10 @@ class LEDWall:
 
     def strobo(self, shared_vars):
         while True:
-            self.pixels.fill(shared_vars.levelColor)
+            self.pixels.fill(shared_vars.primaryColor)
             self.pixels.show()
-            time.sleep(shared_vars.period_sec * shared_vars.duty_cycle)
+            time.sleep(shared_vars.stroboFrequency * shared_vars.stroboDutyCycle)
             self.pixels.fill((0, 0, 0))
             self.pixels.show()
-            time.sleep(shared_vars.period_sec * (1 - shared_vars.duty_cycle))
+            time.sleep(shared_vars.stroboFrequency * (1 - shared_vars.stroboDutyCycle))
 
