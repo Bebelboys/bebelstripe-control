@@ -22,7 +22,8 @@ class FFT:
                                (10000, 20000)]  # Lower and upper frequencies of each frequency bin
 
         self.max_value_transformed_fft_data = 40
-        self.weighting = [2, 6, 8, 16, 16, 32, 32, 64]  # scaling factors of frequency bins. rule of thumb: double frequency -> half power
+        # self.weighting = [2, 6, 8, 16, 16, 32, 32, 64]  # scaling factors of frequency bins. rule of thumb: double frequency -> half power
+        self.weighting = [4, 4, 8, 16, 32, 32, 64, 128]
 
     # Return power array index corresponding to a particular frequency
     def get_power_array_index_of_frequency(self, frequency):
