@@ -3,7 +3,7 @@ import numpy as np
 
 class SharedVariables:
     on = True
-    mode = enumerate('music', 'strobo', 'ambient')
+    mode = 1
     brightness = 1.0
     primaryColor = [248, 24, 148]
     secondaryColor = [0, 0, 255]
@@ -18,3 +18,32 @@ class SharedVariables:
 
     def __init__(self):
         pass
+
+    def list_settings(self):
+        settings = {
+            'general': {
+                'brightness': self.brightness
+            },
+
+            'color': {
+                'primaryColor': self.primaryColor,
+                'secondaryColor': self.secondaryColor
+            },
+
+            'music': {
+                'fallingDot': self.fallingDot,
+                'dotSpeed': self.dotSpeed,
+                'fftWeightings': self.fftWeightings
+            },
+
+            'strobo': {
+                'frequency': self.stroboFrequency,
+                'dutyCycle': self.stroboDutyCycle
+            },
+
+            'ambient': {
+                'pulsing': self.ambientPulsing,
+                'frequency': self.ambientFrequency
+            }
+        }
+        return settings
