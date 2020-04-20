@@ -26,18 +26,17 @@ class LEDWall:
             spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
             for column in range(0, self.num_columns):
-                # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen?
-                # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
-                if spectrum_levels[column] > 43:
-                    spectrum_levels[column] = 43
+                # Comparison of the old value of the fallingDot with the new one
                 if self.fallingDotOldValue[column] <= shared_vars.musicSpectrumLevels[column]:
                     self.fallingDotOldValue[column] = shared_vars.musicSpectrumLevels[column]
                 elif self.fallingDotOldValue[column] > 0 and self.dotFallingRate > 1:
                     self.fallingDotOldValue[column] -= 1
+                # filling the pixel matrix
                 for neglevel in range(0, self.num_rows - spectrum_levels[column]):
                     self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
                 for level in range(0, spectrum_levels[column]):
                     self.pixels[self.num_rows * column + level] = shared_vars.LEDPrimaryColor
+                # Set fallingDot if True
                 if shared_vars.fallingDot:
                     self.pixels[self.num_rows * column + self.fallingDotOldValue[column]] = shared_vars.LEDSecondaryColor
 
