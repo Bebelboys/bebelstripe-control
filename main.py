@@ -56,23 +56,6 @@ class HelloWorld(Resource):
         return {'hello': 'world'}, 200
 
 
-class Color(Resource):
-    def options(self):
-        return {'primaryColor': shared_vars.primaryColor, 'secondaryColor': shared_vars.secondaryColor}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
-
-    def get(self):
-        return {'primaryColor': shared_vars.primaryColor, 'secondaryColor': shared_vars.secondaryColor}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
-
-    def put(self):
-        args = colorParser.parse_args()
-        print(args)
-        if args['primaryColor']:
-            shared_vars.primaryColor = args['primaryColor']
-        if args['secondaryColor']:
-            shared_vars.secondaryColor = args['secondaryColor']
-        return {'primaryColor': shared_vars.primaryColor, 'secondaryColor': shared_vars.secondaryColor}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
-
-
 class Settings(Resource):
     def options(self):
         return {}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
@@ -135,15 +118,14 @@ class Control(Resource):
 
     def put(self):
         control = controlParser.parse_args()
-        if control['on']:
+        if control['on'] is not None:
             shared_vars.on = control['on']
-        if control['mode']:
+        if control['mode'] is not None:
             shared_vars.mode = control['mode']
         return shared_vars.list_control(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
 
 
 flaskApi.add_resource(HelloWorld, '/')
-flaskApi.add_resource(Color, '/color')
 flaskApi.add_resource(Settings, '/settings')
 flaskApi.add_resource(Control, '/control')
 
