@@ -12,7 +12,6 @@ class SharedVariables:
     LEDSecondaryColor = [0, 0, 255]
     musicSpectrumLevels = np.array(8 * [0])
     fallingDot = True
-    dotSpeed = 1
     fftWeightings = [4, 4, 8, 16, 32, 32, 64, 128]
     stroboFrequency = 0.05
     stroboDutyCycle = 0.5
@@ -35,7 +34,6 @@ class SharedVariables:
 
             'music': {
                 'fallingDot': self.fallingDot,
-                'dotSpeed': self.dotSpeed,
                 'fftWeightings': self.fftWeightings
             },
 
