@@ -83,46 +83,46 @@ class Settings(Resource):
 
     def put(self):
         settings = settingsParser.parse_args()
-        if settings['general']:
+        if settings['general'] is not None:
             general_settings = generalSettingsParser.parse_args(req=settings)
-            if general_settings['brightness']:
+            if general_settings['brightness'] is not None:
                 shared_vars.brightness = general_settings['brightness']
                 # convert brightness scale [0-1] to LED brightness scale
                 shared_vars.LEDBrightness = 2.2405 * math.pow(shared_vars.brightness, 3) - 2.1518 * math.pow(shared_vars.brightness, 2) + 0.9068 * shared_vars.brightness + 0.0045
                 # apply brightness to LED color
                 shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
                 shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
-        if settings['color']:
+        if settings['color'] is not None:
             color_settings = colorSettingsParser.parse_args(req=settings)
-            if color_settings['primaryColor']:
+            if color_settings['primaryColor'] is not None:
                 shared_vars.primaryColor = color_settings['primaryColor']
                 # apply brightness to LED color
                 shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
                 shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
-            if color_settings['secondaryColor']:
+            if color_settings['secondaryColor'] is not None:
                 shared_vars.secondaryColor = color_settings['secondaryColor']
                 # apply brightness to LED color
                 shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
                 shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
-        if settings['music']:
+        if settings['music'] is not None:
             music_settings = musicSettingsParser.parse_args(req=settings)
-            if music_settings['fallingDot']:
+            if music_settings['fallingDot'] is not None:
                 shared_vars.fallingDot = music_settings['fallingDot']
-            if music_settings['dotSpeed']:
+            if music_settings['dotSpeed'] is not None:
                 shared_vars.dotSpeed = music_settings['dotSpeed']
-            if music_settings['fftWeightings']:
+            if music_settings['fftWeightings'] is not None:
                 shared_vars.fftWeightings = music_settings['fftWeightings']
-        if settings['strobo']:
+        if settings['strobo'] is not None:
             strobo_settings = stroboSettingsParser.parse_args(req=settings)
-            if strobo_settings['frequency']:
+            if strobo_settings['frequency'] is not None:
                 shared_vars.stroboFrequency = strobo_settings['frequency']
-            if strobo_settings['dutyCycle']:
+            if strobo_settings['dutyCycle'] is not None:
                 shared_vars.stroboDutyCycle = strobo_settings['dutyCycle']
-        if settings['ambient']:
+        if settings['ambient'] is not None:
             ambient_settings = ambientSettingsParser.parse_args(req=settings)
-            if ambient_settings['pulsing']:
+            if ambient_settings['pulsing'] is not None:
                 shared_vars.ambientPulsing = ambient_settings['pulsing']
-            if ambient_settings['frequency']:
+            if ambient_settings['frequency'] is not None:
                 shared_vars.ambientFrequency = ambient_settings['frequency']
         return shared_vars.list_settings(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
 
