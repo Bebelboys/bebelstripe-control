@@ -14,47 +14,41 @@ class LEDWall:
         self.pixel_type = neopixel.GRB
         self.pixels = neopixel.NeoPixel(pin=self.pixel_pin, n=self.num_pixel, brightness=1.0, auto_write=False,
                                         pixel_order=self.pixel_type)
-        self.oldValue = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.fallingDotOldValue = [0, 0, 0, 0, 0, 0, 0, 0]
         self.dotFallingRate = 0
         self.oldSpectrumLevels = np.array(8 * [0])
 
     def music_spectrum(self, shared_vars):
         self.sinus(iterations=1)
         while True:
-            if shared_vars.fallingDot:
-                self.falling_dot(shared_vars)
-            self.refresh_spectrum(shared_vars)
+            # Smoothing the spectrum level by weighting
+            spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
+            spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
-    def refresh_spectrum(self, shared_vars):
-        spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
-        spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
+            for column in range(0, self.num_columns):
+                # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen?
+                # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
+                if spectrum_levels[column] > 43:
+                    spectrum_levels[column] = 43
+                if self.fallingDotOldValue[column] <= shared_vars.musicSpectrumLevels[column]:
+                    self.fallingDotOldValue[column] = shared_vars.musicSpectrumLevels[column]
+                elif self.fallingDotOldValue[column] > 0 and self.dotFallingRate > 1:
+                    self.fallingDotOldValue[column] -= 1
+                for neglevel in range(0, self.num_rows - spectrum_levels[column]):
+                    self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
+                for level in range(0, spectrum_levels[column]):
+                    self.pixels[self.num_rows * column + level] = shared_vars.LEDPrimaryColor
+                if shared_vars.fallingDot:
+                    self.pixels[self.num_rows * column + self.fallingDotOldValue[column]] = shared_vars.LEDSecondaryColor
 
-        for column in range(0, self.num_columns):
-            # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen? 
-            # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
-            if spectrum_levels[column] > 43:
-                spectrum_levels[column] = 43
-            for neglevel in range(0, self.num_rows - spectrum_levels[column]):
-                self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
-            for level in range(0, spectrum_levels[column]):
-                self.pixels[self.num_rows * column + level] = shared_vars.LEDPrimaryColor
-            if shared_vars.fallingDot:
-                self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.LEDSecondaryColor
-        self.pixels.show()
-        self.oldSpectrumLevels = spectrum_levels
+                # Setting dotFallingRate to 1/3
+                if self.dotFallingRate > 1:
+                    self.dotFallingRate = 0
+                else:
+                    self.dotFallingRate += 1
 
-    def falling_dot(self, shared_vars):
-        for column in range(0, self.num_columns):
-            if shared_vars.musicSpectrumLevels[column] > 43:
-                shared_vars.musicSpectrumLevels[column] = 43
-            if self.oldValue[column] <= shared_vars.musicSpectrumLevels[column]:
-                self.oldValue[column] = shared_vars.musicSpectrumLevels[column]
-            elif self.oldValue[column] > 0 and self.dotFallingRate > 1:
-                self.oldValue[column] -= 1
-        if self.dotFallingRate > 1:
-            self.dotFallingRate = 0
-        else:
-            self.dotFallingRate += 1
+            self.pixels.show()
+            self.oldSpectrumLevels = spectrum_levels
 
     def sinus(self, iterations):
         value = [0, 0, 0, 0, 0, 0, 0, 0]
