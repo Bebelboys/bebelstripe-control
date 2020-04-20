@@ -16,6 +16,10 @@ colorParser = reqparse.RequestParser()
 colorParser.add_argument('primaryColor', type=int, action='append')
 colorParser.add_argument('secondaryColor', type=int, action='append')
 
+controlParser = reqparse.RequestParser()
+controlParser.add_argument('on', type=bool)
+controlParser.add_argument('mode', type=int)
+
 settingsParser = reqparse.RequestParser()
 settingsParser.add_argument('general', type=dict)
 settingsParser.add_argument('color', type=dict)
@@ -108,9 +112,26 @@ class Settings(Resource):
         return shared_vars.list_settings(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
 
 
+class Control(Resource):
+    def options(self):
+        return {}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
+
+    def get(self):
+        return shared_vars.list_control(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
+
+    def put(self):
+        control = controlParser.parse_args()
+        if control['on']:
+            shared_vars.on = control['on']
+        if control['mode']:
+            shared_vars.mode = control['mode']
+        return shared_vars.list_control(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
+
+
 flaskApi.add_resource(HelloWorld, '/')
 flaskApi.add_resource(Color, '/color')
 flaskApi.add_resource(Settings, '/settings')
+flaskApi.add_resource(Control, '/control')
 
 
 def main():

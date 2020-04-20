@@ -47,3 +47,10 @@ class SharedVariables:
             }
         }
         return settings
+
+    def list_control(self):
+        control = {
+            'on': self.on,
+            'mode': self.mode
+        }
+        return control
