@@ -6,7 +6,7 @@ import sys
 import time
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
-import math
+import numpy as np
 
 shared_vars = SharedVariables.SharedVariables()
 
@@ -87,7 +87,9 @@ class Settings(Resource):
             if general_settings['brightness'] is not None:
                 shared_vars.brightness = general_settings['brightness']
                 # convert brightness scale [0-1] to LED brightness scale
-                shared_vars.LEDBrightness = 2.2405 * math.pow(shared_vars.brightness, 3) - 2.1518 * math.pow(shared_vars.brightness, 2) + 0.9068 * shared_vars.brightness + 0.0045
+                brightness_percent_to_led_brightness_in = [0, 0.5, 0.8, 1]
+                brightness_percent_to_led_brightness_out = [0, 0.2, 0.5, 1]
+                shared_vars.LEDBrightness = np.interp(shared_vars.brightness, brightness_percent_to_led_brightness_in, brightness_percent_to_led_brightness_out)
                 # apply brightness to LED color
                 shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
                 shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
