@@ -9,12 +9,39 @@ from flask_restful import Resource, Api, reqparse
 
 shared_vars = SharedVariables.SharedVariables()
 
-flask_app = Flask(__name__)
-flask_api = Api(flask_app)
+flaskApp = Flask(__name__)
+flaskApi = Api(flaskApp)
 
-parser = reqparse.RequestParser()
-parser.add_argument('primaryColor', type=int, action='append')
-parser.add_argument('secondaryColor', type=int, action='append')
+colorParser = reqparse.RequestParser()
+colorParser.add_argument('primaryColor', type=int, action='append')
+colorParser.add_argument('secondaryColor', type=int, action='append')
+
+settingsParser = reqparse.RequestParser()
+settingsParser.add_argument('general', type=dict)
+settingsParser.add_argument('color', type=dict)
+settingsParser.add_argument('music', type=dict)
+settingsParser.add_argument('strobo', type=dict)
+settingsParser.add_argument('ambient', type=dict)
+
+generalSettingsParser = reqparse.RequestParser()
+generalSettingsParser.add_argument('brightness', type=float, location=('general',))
+
+colorSettingsParser = reqparse.RequestParser()
+colorSettingsParser.add_argument('primaryColor', type=dict, location=('color',))
+colorSettingsParser.add_argument('secondaryColor', type=dict, location=('color',))
+
+musicSettingsParser = reqparse.RequestParser()
+musicSettingsParser.add_argument('fallingDot', type=bool, location=('music',))
+musicSettingsParser.add_argument('dotSpeed', type=int, location=('music',))
+musicSettingsParser.add_argument('fftWeightings', type=dict, location=('music',))
+
+stroboSettingsParser = reqparse.RequestParser()
+stroboSettingsParser.add_argument('frequency', type=float, location=('strobo',))
+stroboSettingsParser.add_argument('dutyCycle', type=float, location=('strobo',))
+
+ambientSettingsParser = reqparse.RequestParser()
+ambientSettingsParser.add_argument('pulsing', type=bool, location=('ambient',))
+ambientSettingsParser.add_argument('frequency', type=float, location=('ambient',))
 
 
 class HelloWorld(Resource):
@@ -30,7 +57,7 @@ class Color(Resource):
         return {'primaryColor': shared_vars.primaryColor, 'secondaryColor': shared_vars.secondaryColor}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
 
     def put(self):
-        args = parser.parse_args()
+        args = colorParser.parse_args()
         print(args)
         if args['primaryColor']:
             shared_vars.primaryColor = args['primaryColor']
@@ -39,8 +66,8 @@ class Color(Resource):
         return {'primaryColor': shared_vars.primaryColor, 'secondaryColor': shared_vars.secondaryColor}, 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, PUT, GET, OPTIONS', 'Access-Control-Allow-Headers': '*'}
 
 
-flask_api.add_resource(HelloWorld, '/')
-flask_api.add_resource(Color, '/color')
+flaskApi.add_resource(HelloWorld, '/')
+flaskApi.add_resource(Color, '/color')
 
 
 def main():
@@ -54,7 +81,7 @@ def main():
         t2 = threading.Thread(target=fft.start, args=(shared_vars,))
         t2.daemon = True
         t2.start()
-        t3 = threading.Thread(target=flask_app.run, args=('192.168.120.13', 80,))
+        t3 = threading.Thread(target=flaskApp.run, args=('192.168.120.13', 80,))
         t3.daemon = True
         t3.start()
 
