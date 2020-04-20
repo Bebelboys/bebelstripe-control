@@ -5,8 +5,11 @@ class SharedVariables:
     on = True
     mode = 1
     brightness = 1.0
+    LEDBrightness = 1.0
     primaryColor = [248, 24, 148]
+    LEDPrimaryColor = [248, 24, 148]
     secondaryColor = [0, 0, 255]
+    LEDSecondaryColor = [0, 0, 255]
     musicSpectrumLevels = np.array(8 * [0])
     fallingDot = True
     dotSpeed = 1

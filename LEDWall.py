@@ -36,8 +36,8 @@ class LEDWall:
             for neglevel in range(0, self.num_rows - spectrum_levels[column]):
                 self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
             for level in range(0, spectrum_levels[column]):
-                self.pixels[self.num_rows * column + level] = shared_vars.primaryColor
-            self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.secondaryColor
+                self.pixels[self.num_rows * column + level] = shared_vars.LEDPrimaryColor
+            self.pixels[self.num_rows * column + self.oldValue[column]] = shared_vars.LEDSecondaryColor
         self.pixels.show()
         self.oldSpectrumLevels = spectrum_levels
 
@@ -78,10 +78,14 @@ class LEDWall:
 
     def strobo(self, shared_vars):
         while True:
-            self.pixels.fill(shared_vars.primaryColor)
+            self.pixels.fill(shared_vars.LEDPrimaryColor)
             self.pixels.show()
             time.sleep(shared_vars.stroboFrequency * shared_vars.stroboDutyCycle)
             self.pixels.fill((0, 0, 0))
             self.pixels.show()
             time.sleep(shared_vars.stroboFrequency * (1 - shared_vars.stroboDutyCycle))
 
+    def apply_brightness(self, color, brightness):
+        adapted_color = np.array(color)
+        adapted_color = adapted_color * brightness
+        return (adapted_color.astype(int)).tolist()

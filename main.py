@@ -6,8 +6,12 @@ import sys
 import time
 from flask import Flask, request
 from flask_restful import Resource, Api, reqparse
+import math
 
 shared_vars = SharedVariables.SharedVariables()
+
+ledwall = LEDWall.LEDWall()
+fft = FFT.FFT()
 
 flaskApp = Flask(__name__)
 flaskApi = Api(flaskApp)
@@ -83,12 +87,23 @@ class Settings(Resource):
             general_settings = generalSettingsParser.parse_args(req=settings)
             if general_settings['brightness']:
                 shared_vars.brightness = general_settings['brightness']
+                # convert brightness scale [0-1] to LED brightness scale
+                shared_vars.LEDBrightness = 2.2405 * math.pow(shared_vars.brightness, 3) - 2.1518 * math.pow(shared_vars.brightness, 2) + 0.9068 * shared_vars.brightness + 0.0045
+                # apply brightness to LED color
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
         if settings['color']:
             color_settings = colorSettingsParser.parse_args(req=settings)
             if color_settings['primaryColor']:
                 shared_vars.primaryColor = color_settings['primaryColor']
+                # apply brightness to LED color
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
             if color_settings['secondaryColor']:
                 shared_vars.secondaryColor = color_settings['secondaryColor']
+                # apply brightness to LED color
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
         if settings['music']:
             music_settings = musicSettingsParser.parse_args(req=settings)
             if music_settings['fallingDot']:
@@ -136,9 +151,6 @@ flaskApi.add_resource(Control, '/control')
 
 def main():
     try:
-        ledwall = LEDWall.LEDWall()
-        fft = FFT.FFT()
-
         t1 = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,))
         t1.daemon = True
         t1.start()
