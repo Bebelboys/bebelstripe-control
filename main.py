@@ -39,7 +39,7 @@ colorSettingsParser.add_argument('primaryColor', type=int, location=('color',), 
 colorSettingsParser.add_argument('secondaryColor', type=int, location=('color',), action='append')
 
 musicSettingsParser = reqparse.RequestParser()
-musicSettingsParser.add_argument('dotSpeed', type=int, location=('music',))
+musicSettingsParser.add_argument('fallingDot', type=bool, location=('music',))
 musicSettingsParser.add_argument('fftWeightings', type=int, location=('music',), action='append')
 
 stroboSettingsParser = reqparse.RequestParser()
@@ -107,8 +107,8 @@ class Settings(Resource):
                 shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
         if settings['music'] is not None:
             music_settings = musicSettingsParser.parse_args(req=settings)
-            if music_settings['dotSpeed'] is not None:
-                shared_vars.dotSpeed = music_settings['dotSpeed']
+            if music_settings['fallingDot'] is not None:
+                shared_vars.fallingDot = music_settings['fallingDot']
             if music_settings['fftWeightings'] is not None:
                 shared_vars.fftWeightings = music_settings['fftWeightings']
         if settings['strobo'] is not None:
