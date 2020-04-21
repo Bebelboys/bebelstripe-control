@@ -163,11 +163,13 @@ flaskApi.add_resource(Control, '/control')
 
 def main():
     try:
-        ledwall.sinus(1)
-        t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
-        t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
         t_flask = threading.Thread(target=flaskApp.run, args=('192.168.120.13', 80,), daemon=True)
         t_flask.start()
+
+        ledwall.sinus(1)
+        
+        t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
+        t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
         t_music_spectrum.start()
         t_fft.start()
         threads.append(t_music_spectrum)
