@@ -26,9 +26,12 @@ class LEDWall:
             spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
             for column in range(0, self.num_columns):
+                # If fallingDot is True, maximum spectrum level must be one less.
+                if shared_vars.fallingDot & spectrum_levels[column] > 43:
+                    spectrum_levels[column] = 43
                 # Comparison of the old value of the fallingDot with the new one
-                if self.fallingDotOldValue[column] <= shared_vars.musicSpectrumLevels[column]:
-                    self.fallingDotOldValue[column] = shared_vars.musicSpectrumLevels[column]
+                if self.fallingDotOldValue[column] <= spectrum_levels[column]:
+                    self.fallingDotOldValue[column] = spectrum_levels[column]
                 elif self.fallingDotOldValue[column] > 0 and self.dotFallingRate > 1:
                     self.fallingDotOldValue[column] -= 1
                 # filling the pixel matrix
