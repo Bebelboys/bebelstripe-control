@@ -16,13 +16,11 @@ fft = FFT.FFT()
 flaskApp = Flask(__name__)
 flaskApi = Api(flaskApp)
 
-colorParser = reqparse.RequestParser()
-colorParser.add_argument('primaryColor', type=int, action='append')
-colorParser.add_argument('secondaryColor', type=int, action='append')
+threads = []
 
 controlParser = reqparse.RequestParser()
 controlParser.add_argument('on', type=bool)
-controlParser.add_argument('mode', type=int)
+controlParser.add_argument('mode', choices=('music', 'strobo'))
 
 settingsParser = reqparse.RequestParser()
 settingsParser.add_argument('general', type=dict)
@@ -121,7 +119,25 @@ class Control(Resource):
         if control['on'] is not None:
             shared_vars.on = control['on']
         if control['mode'] is not None:
-            shared_vars.mode = control['mode']
+            if shared_vars.mode is not control['mode']:
+                shared_vars.mode = control['mode']
+                shared_vars.kill_threads = True
+                for t in threads:
+                    t.join()
+                threads.clear()
+                shared_vars.kill_threads = False
+                if shared_vars.mode == 'music':
+                    t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
+                    t_music_spectrum.start()
+                    t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
+                    t_fft.start()
+                    threads.append(t_music_spectrum)
+                    threads.append(t_fft)
+                if shared_vars.mode == 'strobo':
+                    t_strobo = threading.Thread(target=ledwall.strobo, args=(shared_vars,), daemon=True)
+                    t_strobo.start()
+                    threads.append(t_strobo)
+
         return shared_vars.list_control(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
 
 
@@ -132,15 +148,15 @@ flaskApi.add_resource(Control, '/control')
 
 def main():
     try:
-        t1 = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,))
-        t1.daemon = True
-        t1.start()
-        t2 = threading.Thread(target=fft.start, args=(shared_vars,))
-        t2.daemon = True
-        t2.start()
-        t3 = threading.Thread(target=flaskApp.run, args=('192.168.120.13', 80,))
-        t3.daemon = True
-        t3.start()
+        ledwall.sinus(1)
+        t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
+        t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
+        t_flask = threading.Thread(target=flaskApp.run, args=('192.168.120.13', 80,), daemon=True)
+        t_flask.start()
+        t_music_spectrum.start()
+        t_fft.start()
+        threads.append(t_music_spectrum)
+        threads.append(t_fft)
 
         while True:
             time.sleep(5)

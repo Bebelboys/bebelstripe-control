@@ -30,6 +30,8 @@ class FFT:
     def start(self, shared_vars):
         spectrum_levels = np.array([0, 0, 0, 0, 0, 0, 0, 0])
         while True:
+            if shared_vars.kill_threads:
+               break
             audio_data = self.audio_stream.read(self.chunk_size, exception_on_overflow=False)
             audio_data = unpack("%dh" % (len(audio_data) / 2), audio_data)
             audio_data = np.array(audio_data, dtype='h')

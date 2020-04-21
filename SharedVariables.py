@@ -3,7 +3,8 @@ import numpy as np
 
 class SharedVariables:
     on = True
-    mode = 1
+    mode = 'music'
+    kill_threads = False
     brightness = 1.0
     LEDBrightness = 1.0
     primaryColor = [248, 24, 148]

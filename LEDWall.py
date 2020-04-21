@@ -19,8 +19,9 @@ class LEDWall:
         self.oldSpectrumLevels = np.array(8 * [0])
 
     def music_spectrum(self, shared_vars):
-        self.sinus(iterations=1)
         while True:
+            if shared_vars.kill_threads:
+               break
             # Smoothing the spectrum level by weighting
             spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
             spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
@@ -76,6 +77,8 @@ class LEDWall:
 
     def strobo(self, shared_vars):
         while True:
+            if shared_vars.kill_threads:
+               break
             self.pixels.fill(shared_vars.LEDPrimaryColor)
             self.pixels.show()
             time.sleep(shared_vars.stroboFrequency * shared_vars.stroboDutyCycle)
