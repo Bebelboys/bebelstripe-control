@@ -90,3 +90,7 @@ class LEDWall:
         adapted_color = np.array(color)
         adapted_color = adapted_color * brightness
         return (adapted_color.astype(int)).tolist()
+
+    def show_color(self, color):
+        self.pixels.fill(color)
+        self.pixels.show()
