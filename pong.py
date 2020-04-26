@@ -35,23 +35,40 @@ class BallReflectedBy(Enum):
 
 
 class Ball:
+    normal_color = (0, 128, 0)
+    score_color = (128, 0, 0)
+
     def __init__(self, initial_direction):
-        self.color = (0, 128, 0)
+        self.color = Ball.normal_color
         self.initBall(initial_direction)
 
-    def initBall(self, initial_direction):
+    def setNormalColor(self):
+        self.color = Ball.normal_color
+
+    def setScoreColor(self):
+        self.color = Ball.score_color
+
+    def initBall(self, initial_direction=None):
+        self.setNormalColor()
         self.position = [int(led_wall_width / 2), int(led_wall_height / 2)]
 
+        if initial_direction is None:
+            random.choice([InitialBallDirection.LEFT,
+                           InitialBallDirection.RIGHT])
         if initial_direction == InitialBallDirection.LEFT:
             x_velocity = -1
-        else:
+        elif initial_direction == InitialBallDirection.RIGHT:
             x_velocity = 1
+        else:
+            raise Exception('Invalid initial_direction (Ball.initBall)')
 
         # y velocity can be +- 4, 3, 2, 1
-        y_velocity = random.choice([i for i in range(-4, 5) if i not in [0]])
+        # DEBUGGING random.choice([i for i in range(-4, 5) if i not in [0]])
+        y_velocity = 0
         self.velocity = [x_velocity, y_velocity]
 
     def updatePosition(self, left_paddle_y_position, left_paddle_height, right_paddle_y_position, right_paddle_height):
+        old_position = self.position
         new_x_position = self.position[0] + self.velocity[0]
         new_y_position = self.position[1] + self.velocity[1]
 
@@ -68,7 +85,7 @@ class Ball:
 
         # check if ball hits paddle or it lands in the gutter
         if new_x_position == 0:
-            if left_paddle_y_position <= new_y_position <= (left_paddle_y_position + left_paddle_height):
+            if left_paddle_y_position <= new_y_position <= (left_paddle_y_position + left_paddle_height - 1):
                 # hit paddle, reflect ball
                 self.velocity[0] = -self.velocity[0]
                 self.velocity[1] = random.choice(
@@ -76,18 +93,20 @@ class Ball:
                 return BallReflectedBy.LEFT_PADDLE
 
         elif new_x_position == led_wall_width - 1:
-            if right_paddle_y_position <= new_y_position <= (right_paddle_y_position + right_paddle_height):
+            if right_paddle_y_position <= new_y_position <= (right_paddle_y_position + right_paddle_height - 1):
                 # hit paddle, reflect ball
                 self.velocity[0] = -self.velocity[0]
                 self.velocity[1] = random.choice(
                     [i for i in range(-4, 5) if i not in [0]])
                 return BallReflectedBy.RIGHT_PADDLE
 
-        elif new_x_position < 0:
+        if new_x_position <= 0:
             # hit gutter, increment score for right player
+            self.setScoreColor()
             return ScoredGoalByPlayer.RIGHT
-        elif new_x_position >= led_wall_width:
+        elif (new_x_position >= (led_wall_width - 1)):
             # hit gutter, increment score for left player
+            self.setScoreColor()
             return ScoredGoalByPlayer.LEFT
 
 
@@ -148,6 +167,8 @@ class Pong:
         self.original_ball_updating_frequency_hz = ball_updating_frequency_hz
         self.ball_updating_frequency_hz = ball_updating_frequency_hz
         self.ball_updating_pause_s = 0
+        self.initialize_ball = False
+        self.initial_ball_direction = None
 
     def update(self):
         self.player_left.paddle.updatePosition()
@@ -157,28 +178,34 @@ class Pong:
         if (time.time() - self.last_ball_update_time) > (1/self.ball_updating_frequency_hz + self.ball_updating_pause_s):
             self.ball_updating_pause_s = 0
             self.last_ball_update_time = time.time()
-            result = self.ball.updatePosition(self.player_left.paddle.y_position, self.player_left.paddle.height,
-                                              self.player_right.paddle.y_position, self.player_right.paddle.height)
 
-            if(result == ScoredGoalByPlayer.LEFT):
-                self.player_left.score += 1
-                self.ball.initBall(InitialBallDirection.LEFT)
-                self.resetBallUpdatingFrequency()
-                return result
-            elif(result == ScoredGoalByPlayer.RIGHT):
-                self.player_right.score += 1
-                self.ball.initBall(InitialBallDirection.RIGHT)
-                self.resetBallUpdatingFrequency()
-                return result
-            elif (result == BallReflectedBy.LEFT_PADDLE or result == BallReflectedBy.RIGHT_PADDLE):
-                self.increaseBallUpdatingFrequency()
+            if self.initialize_ball:
+                self.ball.initBall(self.initial_ball_direction)
+                self.initialize_ball = False
+            else:
+                result = self.ball.updatePosition(self.player_left.paddle.y_position, self.player_left.paddle.height,
+                                                  self.player_right.paddle.y_position, self.player_right.paddle.height)
+                if(result == ScoredGoalByPlayer.LEFT):
+                    self.player_left.score += 1
+                    self.initial_ball_direction = InitialBallDirection.LEFT
+                    self.initialize_ball = True
+                    self.resetBallUpdatingFrequency()
+                    return result
+                elif(result == ScoredGoalByPlayer.RIGHT):
+                    self.player_right.score += 1
+                    self.initial_ball_direction = InitialBallDirection.RIGHT
+                    self.initialize_ball = True
+                    self.resetBallUpdatingFrequency()
+                    return result
+                elif (result == BallReflectedBy.LEFT_PADDLE or result == BallReflectedBy.RIGHT_PADDLE):
+                    self.increaseBallUpdatingFrequency()
 
         return None
 
     def delayBallUpdate(self, delay_s):
         self.ball_updating_pause_s = delay_s
 
-    def increaseBallUpdatingFrequency(self, factor=1.1):
+    def increaseBallUpdatingFrequency(self, factor=1.05):
         self.ball_updating_frequency_hz *= factor
 
     def resetBallUpdatingFrequency(self):
@@ -252,8 +279,14 @@ def main(led_wall, shared_vars):
 
 
 if __name__ == '__main__':
+    led_wall = LEDWall()
+
+    class MockSharedVars:
+        kill_threads = False
+
+    mock_shared_vars = MockSharedVars()
     while True:
         try:
-            main()
-        except Exception:
-            pass
+            main(led_wall, mock_shared_vars)
+        except Exception as e:
+            print(e)
