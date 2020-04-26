@@ -6,10 +6,11 @@ import numpy as np
 
 
 class LEDWall:
+    num_rows = 44
+    num_columns = 8
     def __init__(self):
-        self.num_rows = 44
-        self.num_columns = 8
-        self.num_pixel = self.num_rows * self.num_columns
+
+        self.num_pixel = LEDWall.num_rows * LEDWall.num_columns
         self.pixel_pin = board.D18
         self.pixel_type = neopixel.GRB
         self.pixels = neopixel.NeoPixel(pin=self.pixel_pin, n=self.num_pixel, brightness=1.0, auto_write=False,
@@ -21,12 +22,13 @@ class LEDWall:
     def music_spectrum(self, shared_vars):
         while True:
             if shared_vars.kill_threads:
-               break
+                break
             # Smoothing the spectrum level by weighting
             spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
-            spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
+            spectrum_levels = (spectrum_levels.dot(
+                0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
-            for column in range(0, self.num_columns):
+            for column in range(0, LEDWall.num_columns):
                 # If fallingDot is True, maximum spectrum level must be one less.
                 if shared_vars.fallingDot & spectrum_levels[column] > 43:
                     spectrum_levels[column] = 43
@@ -36,13 +38,16 @@ class LEDWall:
                 elif self.fallingDotOldValue[column] > 0 and self.dotFallingRate > 1:
                     self.fallingDotOldValue[column] -= 1
                 # filling the pixel matrix
-                for neglevel in range(0, self.num_rows - spectrum_levels[column]):
-                    self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
+                for neglevel in range(0, LEDWall.num_rows - spectrum_levels[column]):
+                    self.pixels[LEDWall.num_rows * column +
+                                LEDWall.num_rows - 1 - neglevel] = (0, 0, 0)
                 for level in range(0, spectrum_levels[column]):
-                    self.pixels[self.num_rows * column + level] = shared_vars.LEDPrimaryColor
+                    self.pixels[LEDWall.num_rows * column +
+                                level] = shared_vars.LEDPrimaryColor
                 # Set fallingDot if True
                 if shared_vars.fallingDot:
-                    self.pixels[self.num_rows * column + self.fallingDotOldValue[column]] = shared_vars.LEDSecondaryColor
+                    self.pixels[LEDWall.num_rows * column +
+                                self.fallingDotOldValue[column]] = shared_vars.LEDSecondaryColor
 
                 # Setting dotFallingRate to 1/3
                 if self.dotFallingRate > 1:
@@ -58,8 +63,10 @@ class LEDWall:
         for index in range(0, iterations):
             for c in range(0, 25):
                 for i in range(0, 8):
-                    value[i] = self.translate(cos(i * 6.24 / 6 + c) * 100, -100, 100, 10, 34)
-                    self.pixels[int(value[i] + i * self.num_rows)] = (0, 0, 200)
+                    value[i] = self.translate(
+                        cos(i * 6.24 / 6 + c) * 100, -100, 100, 10, 34)
+                    self.pixels[int(
+                        value[i] + i * LEDWall.num_rows)] = (0, 0, 200)
                 self.pixels.show()
                 time.sleep(0.05)
                 self.pixels.fill((0, 0, 0))
@@ -78,13 +85,15 @@ class LEDWall:
     def strobo(self, shared_vars):
         while True:
             if shared_vars.kill_threads:
-               break
+                break
             self.pixels.fill(shared_vars.LEDPrimaryColor)
             self.pixels.show()
-            time.sleep(shared_vars.stroboFrequency * shared_vars.stroboDutyCycle)
+            time.sleep(shared_vars.stroboFrequency *
+                       shared_vars.stroboDutyCycle)
             self.pixels.fill((0, 0, 0))
             self.pixels.show()
-            time.sleep(shared_vars.stroboFrequency * (1 - shared_vars.stroboDutyCycle))
+            time.sleep(shared_vars.stroboFrequency *
+                       (1 - shared_vars.stroboDutyCycle))
 
     def apply_brightness(self, color, brightness):
         adapted_color = np.array(color)
