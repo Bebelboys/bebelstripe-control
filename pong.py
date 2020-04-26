@@ -29,6 +29,11 @@ class ScoredGoalByPlayer(Enum):
     RIGHT = 'right_player_scored_goal'
 
 
+class BallReflectedBy(Enum):
+    LEFT_PADDLE = 'ball_reflected_by_left_paddle'
+    RIGHT_PADDLE = 'ball_reflected_by_right_paddle'
+
+
 class Ball:
     def __init__(self, initial_direction):
         self.color = (0, 128, 0)
@@ -68,6 +73,7 @@ class Ball:
                 self.velocity[0] = -self.velocity[0]
                 self.velocity[1] = random.choice(
                     [i for i in range(-4, 5) if i not in [0]])
+                return BallReflectedBy.LEFT_PADDLE
 
         elif new_x_position == led_wall_width - 1:
             if right_paddle_y_position <= new_y_position <= (right_paddle_y_position + right_paddle_height):
@@ -75,6 +81,7 @@ class Ball:
                 self.velocity[0] = -self.velocity[0]
                 self.velocity[1] = random.choice(
                     [i for i in range(-4, 5) if i not in [0]])
+                return BallReflectedBy.RIGHT_PADDLE
 
         elif new_x_position < 0:
             # hit gutter, increment score for right player
@@ -82,12 +89,6 @@ class Ball:
         elif new_x_position >= led_wall_width:
             # hit gutter, increment score for left player
             return ScoredGoalByPlayer.LEFT
-
-
-# class PaddleMovementDirection(Enum):
-#     UP = 'paddle_movement_direction_up'
-#     DOWN = 'paddle_movement_direction_down'
-#     STOP = 'paddle_movement_direction_stop'
 
 
 class Paddle:
@@ -108,14 +109,6 @@ class Paddle:
             new_y_position = led_wall_height - self.height
 
         self.y_position = new_y_position
-
-    # def movePaddle(self, direction):
-    #     if (direction == PaddleMovementDirection.UP):
-    #         self.y_velocity = int(self.height/2)
-    #     elif (direction == PaddleMovementDirection.DOWN):
-    #         self.y_velocity = -int(self.height/2)
-    #     elif (direction == PaddleMovementDirection.STOP):
-    #         self.y_velocity = 0
 
     def movePaddleUp(self):
         self.y_velocity = 1
@@ -152,28 +145,75 @@ class Pong:
             [InitialBallDirection.LEFT, InitialBallDirection.RIGHT]))
 
         self.last_ball_update_time = time.time()
+        self.original_ball_updating_frequency_hz = ball_updating_frequency_hz
         self.ball_updating_frequency_hz = ball_updating_frequency_hz
+        self.ball_updating_pause_s = 0
 
     def update(self):
         self.player_left.paddle.updatePosition()
         self.player_right.paddle.updatePosition()
-        if (time.time() - self.last_ball_update_time) > 1/self.ball_updating_frequency_hz:
+
+        # ball is updated with a lower frequency than the paddles so the paddles can move more smoothly
+        if (time.time() - self.last_ball_update_time) > (1/self.ball_updating_frequency_hz + self.ball_updating_pause_s):
+            self.ball_updating_pause_s = 0
             self.last_ball_update_time = time.time()
             result = self.ball.updatePosition(self.player_left.paddle.y_position, self.player_left.paddle.height,
                                               self.player_right.paddle.y_position, self.player_right.paddle.height)
 
             if(result == ScoredGoalByPlayer.LEFT):
                 self.player_left.score += 1
-                time.sleep(1)
                 self.ball.initBall(InitialBallDirection.LEFT)
+                self.resetBallUpdatingFrequency()
+                return result
             elif(result == ScoredGoalByPlayer.RIGHT):
                 self.player_right.score += 1
-                time.sleep(1)
                 self.ball.initBall(InitialBallDirection.RIGHT)
+                self.resetBallUpdatingFrequency()
+                return result
+            elif (result == BallReflectedBy.LEFT_PADDLE or result == BallReflectedBy.RIGHT_PADDLE):
+                self.increaseBallUpdatingFrequency()
+
+        return None
+
+    def delayBallUpdate(self, delay_s):
+        self.ball_updating_pause_s = delay_s
+
+    def increaseBallUpdatingFrequency(self, factor=1.1):
+        self.ball_updating_frequency_hz *= factor
+
+    def resetBallUpdatingFrequency(self):
+        self.ball_updating_frequency_hz = self.original_ball_updating_frequency_hz
 
 
-def main():
-    led_wall = LEDWall()
+def refreshGameScreen(led_wall, pong_game):
+    # delete everything
+    led_wall.pixels.fill((0, 0, 0))
+    # display left paddle
+    for paddle_pixel in range(0, pong_game.player_left.paddle.height):
+        led_wall.pixels[int(pong_game.player_left.paddle.y_position) +
+                        paddle_pixel] = pong_game.player_left.paddle.color
+    # display right paddle
+    for paddle_pixel in range(0, pong_game.player_right.paddle.height):
+        led_wall.pixels[led_wall_height * (led_wall_width - 1) + int(
+            pong_game.player_right.paddle.y_position) + paddle_pixel] = pong_game.player_right.paddle.color
+    # display left player score
+    for score_pixel in range(0, pong_game.player_left.score):
+        led_wall.pixels[led_wall_height *
+                        int(led_wall_width / 2 - 1) + led_wall_height - score_pixel - 1] = (255, 0, 0)
+    # display right player score
+    for score_pixel in range(0, pong_game.player_right.score):
+        led_wall.pixels[led_wall_height *
+                        int(led_wall_width / 2) + led_wall_height - score_pixel - 1] = (255, 0, 0)
+    # display ball
+    led_wall.pixels[led_wall_height * pong_game.ball.position[0] +
+                    pong_game.ball.position[1]] = pong_game.ball.color
+
+    led_wall.pixels.show()
+
+
+def main(led_wall, shared_vars):
+    print('starting pong')
+    #led_wall = LEDWall()
     pong_game = Pong(ball_updating_frequency_hz=4)
 
     keyboard.on_press_key(
@@ -194,33 +234,21 @@ def main():
     keyboard.on_release_key(
         'down', lambda _: pong_game.player_right.paddle.stopPaddle())
 
-    while True:
-        # delete everything
-        led_wall.pixels.fill((0, 0, 0))
-        # display left paddle
-        for paddle_pixel in range(0, pong_game.player_left.paddle.height):
-            led_wall.pixels[int(pong_game.player_left.paddle.y_position) +
-                            paddle_pixel] = pong_game.player_left.paddle.color
-        # display right paddle
-        for paddle_pixel in range(0, pong_game.player_right.paddle.height):
-            led_wall.pixels[led_wall_height * (led_wall_width - 1) + int(
-                pong_game.player_right.paddle.y_position) + paddle_pixel] = pong_game.player_right.paddle.color
-        # display left player score
-        for score_pixel in range(0, pong_game.player_left.score):
-            led_wall.pixels[led_wall_height *
-                            int(led_wall_width / 2 - 1) + led_wall_height - score_pixel - 1] = (255, 0, 0)
-        # display right player score
-        for score_pixel in range(0, pong_game.player_right.score):
-            led_wall.pixels[led_wall_height *
-                            int(led_wall_width / 2) + led_wall_height - score_pixel - 1] = (255, 0, 0)
-        # display ball
-        led_wall.pixels[led_wall_height * pong_game.ball.position[0] +
-                        pong_game.ball.position[1]] = pong_game.ball.color
+    pause_game_due_to_new_ball_init = True
 
-        led_wall.pixels.show()
+    while not shared_vars.kill_threads:
+        # pause if ball was freshly initialized or a goal was just scored
+        if pause_game_due_to_new_ball_init:
+            pong_game.delayBallUpdate(1)
+            pause_game_due_to_new_ball_init = False
+
+        refreshGameScreen(led_wall, pong_game)
 
         # update game
-        pong_game.update()
+        result = pong_game.update()
+        if result is not None:
+            # goal was scored
+            pause_game_due_to_new_ball_init = True
 
 
 if __name__ == '__main__':

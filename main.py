@@ -1,5 +1,6 @@
 import LEDWall
 import FFT
+import pong
 import SharedVariables
 import threading
 import sys
@@ -32,21 +33,29 @@ def change_mode():
     kill_threads()
     if shared_vars.on:
         if shared_vars.mode == 'music':
-            t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
+            t_music_spectrum = threading.Thread(
+                target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
             t_music_spectrum.start()
-            t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
+            t_fft = threading.Thread(
+                target=fft.start, args=(shared_vars,), daemon=True)
             t_fft.start()
             threads.append(t_music_spectrum)
             threads.append(t_fft)
         if shared_vars.mode == 'strobo':
-            t_strobo = threading.Thread(target=ledwall.strobo, args=(shared_vars,), daemon=True)
+            t_strobo = threading.Thread(
+                target=ledwall.strobo, args=(shared_vars,), daemon=True)
             t_strobo.start()
             threads.append(t_strobo)
+        if shared_vars.mode == 'pong':
+            t_pong = threading.Thread(
+                target=pong.main, args=(ledwall, shared_vars,), daemon=True)
+            t_pong.start()
+            threads.append(t_pong)
 
 
 controlParser = reqparse.RequestParser()
 controlParser.add_argument('on', type=bool)
-controlParser.add_argument('mode', choices=('music', 'strobo'))
+controlParser.add_argument('mode', choices=('music', 'strobo', 'pong'))
 
 settingsParser = reqparse.RequestParser()
 settingsParser.add_argument('general', type=dict)
@@ -56,23 +65,30 @@ settingsParser.add_argument('strobo', type=dict)
 settingsParser.add_argument('ambient', type=dict)
 
 generalSettingsParser = reqparse.RequestParser()
-generalSettingsParser.add_argument('brightness', type=float, location=('general',))
+generalSettingsParser.add_argument(
+    'brightness', type=float, location=('general',))
 
 colorSettingsParser = reqparse.RequestParser()
-colorSettingsParser.add_argument('primaryColor', type=int, location=('color',), action='append')
-colorSettingsParser.add_argument('secondaryColor', type=int, location=('color',), action='append')
+colorSettingsParser.add_argument(
+    'primaryColor', type=int, location=('color',), action='append')
+colorSettingsParser.add_argument(
+    'secondaryColor', type=int, location=('color',), action='append')
 
 musicSettingsParser = reqparse.RequestParser()
 musicSettingsParser.add_argument('fallingDot', type=bool, location=('music',))
-musicSettingsParser.add_argument('fftWeightings', type=int, location=('music',), action='append')
+musicSettingsParser.add_argument(
+    'fftWeightings', type=int, location=('music',), action='append')
 
 stroboSettingsParser = reqparse.RequestParser()
-stroboSettingsParser.add_argument('frequency', type=float, location=('strobo',))
-stroboSettingsParser.add_argument('dutyCycle', type=float, location=('strobo',))
+stroboSettingsParser.add_argument(
+    'frequency', type=float, location=('strobo',))
+stroboSettingsParser.add_argument(
+    'dutyCycle', type=float, location=('strobo',))
 
 ambientSettingsParser = reqparse.RequestParser()
 ambientSettingsParser.add_argument('pulsing', type=bool, location=('ambient',))
-ambientSettingsParser.add_argument('frequency', type=float, location=('ambient',))
+ambientSettingsParser.add_argument(
+    'frequency', type=float, location=('ambient',))
 
 
 class HelloWorld(Resource):
@@ -96,22 +112,29 @@ class Settings(Resource):
                 # convert brightness scale [0-1] to LED brightness scale
                 brightness_percent_to_led_brightness_in = [0, 0.5, 0.8, 1]
                 brightness_percent_to_led_brightness_out = [0, 0.2, 0.5, 1]
-                shared_vars.LEDBrightness = np.interp(shared_vars.brightness, brightness_percent_to_led_brightness_in, brightness_percent_to_led_brightness_out)
+                shared_vars.LEDBrightness = np.interp(
+                    shared_vars.brightness, brightness_percent_to_led_brightness_in, brightness_percent_to_led_brightness_out)
                 # apply brightness to LED color
-                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
-                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(
+                    shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(
+                    shared_vars.secondaryColor, shared_vars.LEDBrightness)
         if settings['color'] is not None:
             color_settings = colorSettingsParser.parse_args(req=settings)
             if color_settings['primaryColor'] is not None:
                 shared_vars.primaryColor = color_settings['primaryColor']
                 # apply brightness to LED color
-                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
-                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(
+                    shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(
+                    shared_vars.secondaryColor, shared_vars.LEDBrightness)
             if color_settings['secondaryColor'] is not None:
                 shared_vars.secondaryColor = color_settings['secondaryColor']
                 # apply brightness to LED color
-                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(shared_vars.primaryColor, shared_vars.LEDBrightness)
-                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(shared_vars.secondaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDPrimaryColor = ledwall.apply_brightness(
+                    shared_vars.primaryColor, shared_vars.LEDBrightness)
+                shared_vars.LEDSecondaryColor = ledwall.apply_brightness(
+                    shared_vars.secondaryColor, shared_vars.LEDBrightness)
         if settings['music'] is not None:
             music_settings = musicSettingsParser.parse_args(req=settings)
             if music_settings['fallingDot'] is not None:
@@ -163,13 +186,16 @@ flaskApi.add_resource(Control, '/control')
 
 def main():
     try:
-        t_flask = threading.Thread(target=flaskApp.run, args=('192.168.120.13', 80,), daemon=True)
+        t_flask = threading.Thread(target=flaskApp.run, args=(
+            '192.168.120.13', 80,), daemon=True)
         t_flask.start()
 
         ledwall.sinus(1)
-        
-        t_music_spectrum = threading.Thread(target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
-        t_fft = threading.Thread(target=fft.start, args=(shared_vars,), daemon=True)
+
+        t_music_spectrum = threading.Thread(
+            target=ledwall.music_spectrum, args=(shared_vars,), daemon=True)
+        t_fft = threading.Thread(
+            target=fft.start, args=(shared_vars,), daemon=True)
         t_music_spectrum.start()
         t_fft.start()
         threads.append(t_music_spectrum)
