@@ -1,14 +1,20 @@
 import random
 from enum import Enum
+import time
 import keyboard
+import json
 
 from LEDWall import LEDWall
 
-import pdb
 
-import time
+def jsonDumpsDefault(x):
+    if isinstance(x, Enum):
+        return x._value_  # _value_ oder _name_
+    else:
+        return getattr(x, '__dict__', str(x))
 
 # coordinate system starts at lower left LED
+
 
 led_wall_width = LEDWall.num_columns
 led_wall_height = LEDWall.num_rows
@@ -20,8 +26,8 @@ class InitialBallDirection(Enum):
 
 
 class PlayerPosition(Enum):
-    LEFT = 'player_position_left'
-    RIGHT = 'player_position_right'
+    LEFT = 'left_player'
+    RIGHT = 'right_player'
 
 
 class ScoredGoalByPlayer(Enum):
@@ -68,7 +74,6 @@ class Ball:
         self.velocity = [x_velocity, y_velocity]
 
     def updatePosition(self, left_paddle_y_position, left_paddle_height, right_paddle_y_position, right_paddle_height):
-        old_position = self.position
         new_x_position = self.position[0] + self.velocity[0]
         new_y_position = self.position[1] + self.velocity[1]
 
@@ -129,13 +134,13 @@ class Paddle:
 
         self.y_position = new_y_position
 
-    def movePaddleUp(self):
+    def startUpwardMovement(self):
         self.y_velocity = 1
 
-    def movePaddleDown(self):
+    def startDownwardMovement(self):
         self.y_velocity = -1
 
-    def stopPaddle(self):
+    def stopMovement(self):
         self.y_velocity = 0
 
 
@@ -157,9 +162,9 @@ class Player:
 
 
 class Pong:
-    def __init__(self, ball_updating_frequency_hz=1):
-        self.player_left = Player(PlayerPosition.LEFT)
-        self.player_right = Player(PlayerPosition.RIGHT)
+    def __init__(self, ball_updating_frequency_hz=4):
+        self.left_player = Player(PlayerPosition.LEFT)
+        self.right_player = Player(PlayerPosition.RIGHT)
         self.ball = Ball(random.choice(
             [InitialBallDirection.LEFT, InitialBallDirection.RIGHT]))
 
@@ -171,8 +176,8 @@ class Pong:
         self.initial_ball_direction = None
 
     def update(self):
-        self.player_left.paddle.updatePosition()
-        self.player_right.paddle.updatePosition()
+        self.left_player.paddle.updatePosition()
+        self.right_player.paddle.updatePosition()
 
         # ball is updated with a lower frequency than the paddles so the paddles can move more smoothly
         if (time.time() - self.last_ball_update_time) > (1/self.ball_updating_frequency_hz + self.ball_updating_pause_s):
@@ -183,16 +188,16 @@ class Pong:
                 self.ball.initBall(self.initial_ball_direction)
                 self.initialize_ball = False
             else:
-                result = self.ball.updatePosition(self.player_left.paddle.y_position, self.player_left.paddle.height,
-                                                  self.player_right.paddle.y_position, self.player_right.paddle.height)
+                result = self.ball.updatePosition(self.left_player.paddle.y_position, self.left_player.paddle.height,
+                                                  self.right_player.paddle.y_position, self.right_player.paddle.height)
                 if(result == ScoredGoalByPlayer.LEFT):
-                    self.player_left.score += 1
+                    self.left_player.score += 1
                     self.initial_ball_direction = InitialBallDirection.LEFT
                     self.initialize_ball = True
                     self.resetBallUpdatingFrequency()
                     return result
                 elif(result == ScoredGoalByPlayer.RIGHT):
-                    self.player_right.score += 1
+                    self.right_player.score += 1
                     self.initial_ball_direction = InitialBallDirection.RIGHT
                     self.initialize_ball = True
                     self.resetBallUpdatingFrequency()
@@ -211,24 +216,41 @@ class Pong:
     def resetBallUpdatingFrequency(self):
         self.ball_updating_frequency_hz = self.original_ball_updating_frequency_hz
 
+    def getPlayerState(self, player_id):
+        if player_id == PlayerPosition.LEFT:
+            return json.dumps(self.left_player, default=jsonDumpsDefault, sort_keys=True)
+        elif player_id == PlayerPosition.RIGHT:
+            return json.dumps(self.right_player, default=jsonDumpsDefault, sort_keys=True)
+        else:
+            raise Exception(
+                f'Invalid player_id: {player_id} in Pong.getPlayerState')
+
+    def getGameState(self):
+        return json.dumps(self.__dict__, default=jsonDumpsDefault, sort_keys=True)
+
+    def restartGame(self):
+        original_ball_updating_frequency_hz = self.original_ball_updating_frequency_hz
+        del self.__dict__
+        self.__init__(original_ball_updating_frequency_hz)
+
 
 def refreshGameScreen(led_wall, pong_game):
     # delete everything
     led_wall.pixels.fill((0, 0, 0))
     # display left paddle
-    for paddle_pixel in range(0, pong_game.player_left.paddle.height):
-        led_wall.pixels[int(pong_game.player_left.paddle.y_position) +
-                        paddle_pixel] = pong_game.player_left.paddle.color
+    for paddle_pixel in range(0, pong_game.left_player.paddle.height):
+        led_wall.pixels[int(pong_game.left_player.paddle.y_position) +
+                        paddle_pixel] = pong_game.left_player.paddle.color
     # display right paddle
-    for paddle_pixel in range(0, pong_game.player_right.paddle.height):
+    for paddle_pixel in range(0, pong_game.right_player.paddle.height):
         led_wall.pixels[led_wall_height * (led_wall_width - 1) + int(
-            pong_game.player_right.paddle.y_position) + paddle_pixel] = pong_game.player_right.paddle.color
+            pong_game.right_player.paddle.y_position) + paddle_pixel] = pong_game.right_player.paddle.color
     # display left player score
-    for score_pixel in range(0, pong_game.player_left.score):
+    for score_pixel in range(0, pong_game.left_player.score):
         led_wall.pixels[led_wall_height *
                         int(led_wall_width / 2 - 1) + led_wall_height - score_pixel - 1] = (255, 0, 0)
     # display right player score
-    for score_pixel in range(0, pong_game.player_right.score):
+    for score_pixel in range(0, pong_game.right_player.score):
         led_wall.pixels[led_wall_height *
                         int(led_wall_width / 2) + led_wall_height - score_pixel - 1] = (255, 0, 0)
     # display ball
@@ -238,28 +260,24 @@ def refreshGameScreen(led_wall, pong_game):
     led_wall.pixels.show()
 
 
-def main(led_wall, shared_vars):
-    print('starting pong')
-    #led_wall = LEDWall()
-    pong_game = Pong(ball_updating_frequency_hz=4)
+def main(pong_game, led_wall, shared_vars):
+    keyboard.on_press_key(
+        'w', lambda _: pong_game.left_player.paddle.startUpwardMovement())
+    keyboard.on_release_key(
+        'w', lambda _: pong_game.left_player.paddle.stopMovement())
+    keyboard.on_press_key(
+        's', lambda _: pong_game.left_player.paddle.startDownwardMovement())
+    keyboard.on_release_key(
+        's', lambda _: pong_game.left_player.paddle.stopMovement())
 
     keyboard.on_press_key(
-        'w', lambda _: pong_game.player_left.paddle.movePaddleUp())
+        'up', lambda _: pong_game.right_player.paddle.startUpwardMovement())
     keyboard.on_release_key(
-        'w', lambda _: pong_game.player_left.paddle.stopPaddle())
+        'up', lambda _: pong_game.right_player.paddle.stopMovement())
     keyboard.on_press_key(
-        's', lambda _: pong_game.player_left.paddle.movePaddleDown())
+        'down', lambda _: pong_game.right_player.paddle.startDownwardMovement())
     keyboard.on_release_key(
-        's', lambda _: pong_game.player_left.paddle.stopPaddle())
-
-    keyboard.on_press_key(
-        'up', lambda _: pong_game.player_right.paddle.movePaddleUp())
-    keyboard.on_release_key(
-        'up', lambda _: pong_game.player_right.paddle.stopPaddle())
-    keyboard.on_press_key(
-        'down', lambda _: pong_game.player_right.paddle.movePaddleDown())
-    keyboard.on_release_key(
-        'down', lambda _: pong_game.player_right.paddle.stopPaddle())
+        'down', lambda _: pong_game.right_player.paddle.stopMovement())
 
     pause_game_due_to_new_ball_init = True
 

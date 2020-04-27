@@ -1,7 +1,8 @@
 import LEDWall
 import FFT
-import pong
 import SharedVariables
+import pong
+from pong_flask_resource import PongControl
 import threading
 import sys
 import time
@@ -13,6 +14,7 @@ shared_vars = SharedVariables.SharedVariables()
 
 ledwall = LEDWall.LEDWall()
 fft = FFT.FFT()
+pong_game = pong.Pong()
 
 flaskApp = Flask(__name__)
 flaskApi = Api(flaskApp)
@@ -47,8 +49,9 @@ def change_mode():
             t_strobo.start()
             threads.append(t_strobo)
         if shared_vars.mode == 'pong':
+            pong_game.restartGame()
             t_pong = threading.Thread(
-                target=pong.main, args=(ledwall, shared_vars,), daemon=True)
+                target=pong.main, args=(pong_game, ledwall, shared_vars,), daemon=True)
             t_pong.start()
             threads.append(t_pong)
 
@@ -92,8 +95,11 @@ ambientSettingsParser.add_argument(
 
 
 class HelloWorld(Resource):
+    def __init__(self, message):
+        self.message = message
+
     def get(self):
-        return {'hello': 'world'}, 200
+        return {'hello': self.message}, 200
 
 
 class Settings(Resource):
@@ -179,9 +185,10 @@ class Control(Resource):
         return shared_vars.list_control(), 200, {'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*'}
 
 
-flaskApi.add_resource(HelloWorld, '/')
+flaskApi.add_resource(HelloWorld, '/', resource_class_args=('test',))
 flaskApi.add_resource(Settings, '/settings')
 flaskApi.add_resource(Control, '/control')
+flaskApi.add_resource(PongControl, '/pong', resource_class_args=(pong_game,))
 
 
 def main():
