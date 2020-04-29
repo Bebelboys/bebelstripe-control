@@ -25,31 +25,33 @@ class PongControl(Resource):
     def put(self):
         pong_control_arguments = pong_control_parser.parse_args()
 
+        # check which players should be modified
+        players_to_modify = dict()
         if pong_control_arguments['left_player'] is not None:
-            paddle_velocity = pong_control_arguments['left_player']['paddle']['y_velocity']
-            if paddle_velocity == 1:
-                self.pong_game.left_player.paddle.startUpwardMovement()
-            elif paddle_velocity == 0:
-                self.pong_game.left_player.paddle.stopMovement()
-            elif paddle_velocity == -1:
-                self.pong_game.left_player.paddle.startDownwardMovement()
-            else:
-                raise Exception(
-                    f'Invalid paddle velocity given to pong control: {paddle_velocity}')
-
+            players_to_modify.update(
+                {'left_player': self.pong_game.left_player})
         if pong_control_arguments['right_player'] is not None:
-            paddle_velocity = pong_control_arguments['right_player']['paddle']['y_velocity']
-            print(paddle_velocity, type(paddle_velocity))
-            if paddle_velocity == 1:
-                print('hi')
-                self.pong_game.right_player.paddle.startUpwardMovement()
-            elif paddle_velocity == 0:
-                self.pong_game.right_player.paddle.stopMovement()
-            elif paddle_velocity == -1:
-                self.pong_game.right_player.paddle.startDownwardMovement()
-            else:
-                raise Exception(
-                    f'Invalid paddle velocity given to pong control: {paddle_velocity}')
+            players_to_modify.update(
+                {'right_player': self.pong_game.right_player})
+
+        for player_string, player_object in players_to_modify.items():
+            player_paddle_arguments = pong_control_arguments[player_string]['paddle']
+
+            if 'y_velocity' in player_paddle_arguments:
+                paddle_velocity = player_paddle_arguments['y_velocity']
+                if paddle_velocity == 1:
+                    player_object.paddle.startUpwardMovement()
+                elif paddle_velocity == 0:
+                    player_object.paddle.stopMovement()
+                elif paddle_velocity == -1:
+                    player_object.paddle.startDownwardMovement()
+                else:
+                    raise Exception(
+                        f'Invalid paddle velocity given to pong control: {player_string} {paddle_velocity}')
+
+            if 'height' in player_paddle_arguments:
+                paddle_height = player_paddle_arguments['height']
+                player_object.paddle.setHeight(paddle_height)
 
         # new_player_state = self.pong_game.getPlayerState(
         #     pong.PlayerPosition.LEFT if player_id == 'left_player' else pong.PlayerPosition.RIGHT)

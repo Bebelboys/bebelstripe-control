@@ -143,6 +143,9 @@ class Paddle:
     def stopMovement(self):
         self.y_velocity = 0
 
+    def setHeight(self, height):
+        self.height = height
+
 
 class Player:
     def __init__(self, player_position):
