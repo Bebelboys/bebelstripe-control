@@ -22,7 +22,6 @@ class FFT:
                                (10000, 20000)]  # Lower and upper frequencies of each frequency bin
 
         self.max_value_transformed_fft_data = 40
-        self.weighting = [2, 6, 8, 16, 16, 32, 32, 64]  # scaling factors of frequency bins. rule of thumb: double frequency -> half power
 
     # Return power array index corresponding to a particular frequency
     def get_power_array_index_of_frequency(self, frequency):
@@ -31,6 +30,8 @@ class FFT:
     def start(self, shared_vars):
         spectrum_levels = np.array([0, 0, 0, 0, 0, 0, 0, 0])
         while True:
+            if shared_vars.kill_threads:
+               break
             audio_data = self.audio_stream.read(self.chunk_size, exception_on_overflow=False)
             audio_data = unpack("%dh" % (len(audio_data) / 2), audio_data)
             audio_data = np.array(audio_data, dtype='h')
@@ -48,10 +49,10 @@ class FFT:
                 # TODO: use bell curve instead of mean (Flori)
 
             # tidy up spectrum level values
-            spectrum_levels = np.divide(np.multiply(spectrum_levels, self.weighting), 1000000)
+            spectrum_levels = np.divide(np.multiply(spectrum_levels, shared_vars.fftWeightings), 1000000)
             # TODO: 1e6 determined empirically
             spectrum_levels = np.interp(spectrum_levels, [0, self.max_value_transformed_fft_data],  [0, self.num_rows])
             # TODO: max_value_transformed_fft_data was determined empirically
             # transform to integer array and set to shared_vars
             spectrum_levels = spectrum_levels.astype(int)
-            shared_vars.music_spectrum_levels = spectrum_levels.tolist()
+            shared_vars.musicSpectrumLevels = spectrum_levels.tolist()

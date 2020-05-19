@@ -4,65 +4,69 @@ import time
 from math import cos
 import numpy as np
 
-from options import *
-
 
 class LEDWall:
+    num_rows = 44
+    num_columns = 8
     def __init__(self):
-        self.num_rows = 44
-        self.num_columns = 8
-        self.num_pixel = self.num_rows * self.num_columns
+
+        self.num_pixel = LEDWall.num_rows * LEDWall.num_columns
         self.pixel_pin = board.D18
         self.pixel_type = neopixel.GRB
         self.pixels = neopixel.NeoPixel(pin=self.pixel_pin, n=self.num_pixel, brightness=1.0, auto_write=False,
                                         pixel_order=self.pixel_type)
-        self.oldValue = [0, 0, 0, 0, 0, 0, 0, 0]
+        self.fallingDotOldValue = [0, 0, 0, 0, 0, 0, 0, 0]
         self.dotFallingRate = 0
         self.oldSpectrumLevels = np.array(8 * [0])
 
     def music_spectrum(self, shared_vars):
-        self.sinus(iterations=1)
         while True:
-            self.falling_dot(shared_vars.music_spectrum_levels)
-            self.refresh_spectrum(shared_vars.music_spectrum_levels)
+            if shared_vars.kill_threads:
+                break
+            # Smoothing the spectrum level by weighting
+            spectrum_levels = np.array(shared_vars.musicSpectrumLevels)
+            spectrum_levels = (spectrum_levels.dot(
+                0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
 
-    def refresh_spectrum(self, spectrum_levels):
-        spectrum_levels = np.array(spectrum_levels)
-        spectrum_levels = (spectrum_levels.dot(0.6) + self.oldSpectrumLevels.dot(0.4)).astype(int)
+            for column in range(0, LEDWall.num_columns):
+                # If fallingDot is True, maximum spectrum level must be one less.
+                if shared_vars.fallingDot & spectrum_levels[column] > 43:
+                    spectrum_levels[column] = 43
+                # Comparison of the old value of the fallingDot with the new one
+                if self.fallingDotOldValue[column] <= spectrum_levels[column]:
+                    self.fallingDotOldValue[column] = spectrum_levels[column]
+                elif self.fallingDotOldValue[column] > 0 and self.dotFallingRate > 1:
+                    self.fallingDotOldValue[column] -= 1
+                # filling the pixel matrix
+                for neglevel in range(0, LEDWall.num_rows - spectrum_levels[column]):
+                    self.pixels[LEDWall.num_rows * column +
+                                LEDWall.num_rows - 1 - neglevel] = (0, 0, 0)
+                for level in range(0, spectrum_levels[column]):
+                    self.pixels[LEDWall.num_rows * column +
+                                level] = shared_vars.LEDPrimaryColor
+                # Set fallingDot if True
+                if shared_vars.fallingDot:
+                    self.pixels[LEDWall.num_rows * column +
+                                self.fallingDotOldValue[column]] = shared_vars.LEDSecondaryColor
 
-        for column in range(0, self.num_columns):
-            # 1: Statt > 43 lieber auf > self.num_rows - 1 prüfen? 
-            # 2: Eigentlich wärs schöner wenn FFT.py den Check/Korrektur durchführt
-            if spectrum_levels[column] > 43:
-                spectrum_levels[column] = 43
-            for neglevel in range(0, self.num_rows - spectrum_levels[column]):
-                self.pixels[self.num_rows * column + self.num_rows - 1 - neglevel] = (0, 0, 0)
-            for level in range(0, spectrum_levels[column]):
-                self.pixels[self.num_rows * column + level] = levelColor
-            self.pixels[self.num_rows * column + self.oldValue[column]] = dotColor
-        self.pixels.show()
-        self.oldSpectrumLevels = spectrum_levels
+                # Setting dotFallingRate to 1/3
+                if self.dotFallingRate > 1:
+                    self.dotFallingRate = 0
+                else:
+                    self.dotFallingRate += 1
 
-    def falling_dot(self, spectrum_levels):
-        for column in range(0, self.num_columns):
-            if spectrum_levels[column] > 43:
-                spectrum_levels[column] = 43
-            if self.oldValue[column] <= spectrum_levels[column]:
-                self.oldValue[column] = spectrum_levels[column]
-            elif self.oldValue[column] > 0 and self.dotFallingRate > 1:
-                self.oldValue[column] -= 1
-        if self.dotFallingRate > 1:
-            self.dotFallingRate = 0
-        else:
-            self.dotFallingRate += 1
+            self.pixels.show()
+            self.oldSpectrumLevels = spectrum_levels
 
     def sinus(self, iterations):
         value = [0, 0, 0, 0, 0, 0, 0, 0]
         for index in range(0, iterations):
             for c in range(0, 25):
                 for i in range(0, 8):
-                    value[i] = self.translate(cos(i * 6.24 / 6 + c) * 100, -100, 100, 10, 34)
-                    self.pixels[int(value[i] + i * self.num_rows)] = (0, 0, 200)
+                    value[i] = self.translate(
+                        cos(i * 6.24 / 6 + c) * 100, -100, 100, 10, 34)
+                    self.pixels[int(
+                        value[i] + i * LEDWall.num_rows)] = (0, 0, 200)
                 self.pixels.show()
                 time.sleep(0.05)
                 self.pixels.fill((0, 0, 0))
@@ -80,10 +84,22 @@ class LEDWall:
 
     def strobo(self, shared_vars):
         while True:
-            self.pixels.fill(shared_vars.levelColor)
+            if shared_vars.kill_threads:
+                break
+            self.pixels.fill(shared_vars.LEDPrimaryColor)
             self.pixels.show()
-            time.sleep(shared_vars.period_sec * shared_vars.duty_cycle)
+            time.sleep(shared_vars.stroboFrequency *
+                       shared_vars.stroboDutyCycle)
             self.pixels.fill((0, 0, 0))
             self.pixels.show()
-            time.sleep(shared_vars.period_sec * (1 - shared_vars.duty_cycle))
+            time.sleep(shared_vars.stroboFrequency *
+                       (1 - shared_vars.stroboDutyCycle))
 
+    def apply_brightness(self, color, brightness):
+        adapted_color = np.array(color)
+        adapted_color = adapted_color * brightness
+        return (adapted_color.astype(int)).tolist()
+
+    def show_color(self, color):
+        self.pixels.fill(color)
+        self.pixels.show()
